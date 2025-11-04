@@ -15,37 +15,22 @@
 
     <br />
     <button id="volverInicio">🏠 Volver al inicio</button>
-
-    <!-- Diccionario siempre visible -->
-    <div id="diccionarioContainer" style="margin-top:20px; text-align:left;">
-      <input
-        type="text"
-        id="buscar"
-        placeholder="Buscar palabra..."
-        style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc"
-      />
-      <div id="diccionarioLista"></div>
-    </div>
   </div>
 
   <script>
-    // Variables globales
     let palabras = [];
     let indiceActual = 0;
 
-    // Elementos del DOM
     const preguntaEl = document.getElementById("pregunta");
     const opcionesEl = document.getElementById("opciones");
     const feedbackEl = document.getElementById("feedback");
     const siguienteBtn = document.getElementById("siguiente");
     const volverInicioBtn = document.getElementById("volverInicio");
-    const diccLista = document.getElementById("diccionarioLista");
-    const buscarInput = document.getElementById("buscar");
 
-    // Función para cargar JSON
     async function cargarDatos(url) {
       try {
         const res = await fetch(url);
+        if (!res.ok) throw new Error("No se pudo cargar el archivo");
         const data = await res.json();
         return data;
       } catch (error) {
@@ -55,7 +40,6 @@
       }
     }
 
-    // Mostrar pregunta y opciones
     function mostrarPregunta() {
       if (indiceActual >= palabras.length) {
         preguntaEl.textContent = "¡Has terminado la lección!";
@@ -66,10 +50,8 @@
       const item = palabras[indiceActual];
       preguntaEl.textContent = `¿Qué significa: "${item.palabra}"?`;
 
-      // Opciones: mezclamos el significado correcto con otros al azar
       let opciones = [item.significado];
 
-      // Tomar otros significados aleatorios para las opciones (3 más o menos)
       let otros = palabras
         .filter((_, i) => i !== indiceActual)
         .sort(() => 0.5 - Math.random())
@@ -92,7 +74,6 @@
       siguienteBtn.style.display = "none";
     }
 
-    // Verificar respuesta
     function verificarRespuesta(respuesta) {
       const correcto = palabras[indiceActual].significado;
       if (respuesta === correcto) {
@@ -101,7 +82,6 @@
         feedbackEl.textContent = `❌ Incorrecto. La respuesta correcta es: ${correcto}`;
       }
       siguienteBtn.style.display = "inline-block";
-      // Deshabilitar botones
       Array.from(opcionesEl.children).forEach((btn) => {
         btn.disabled = true;
         if (btn.textContent === correcto) btn.style.backgroundColor = "#00b894";
@@ -109,43 +89,19 @@
       });
     }
 
-    // Ir a siguiente pregunta
     siguienteBtn.addEventListener("click", () => {
       indiceActual++;
       mostrarPregunta();
     });
 
-    // Volver al inicio
     volverInicioBtn.addEventListener("click", () => {
       window.location.href = "index.html";
     });
 
-    // Mostrar diccionario (inicial y filtrado)
-    function mostrarDiccionario(lista) {
-      diccLista.innerHTML = lista
-        .map(
-          (p) =>
-            `<b>${p.palabra}</b>: ${p.significado}<br><i>Ejemplo:</i> ${
-              p.ejemplo || "N/A"
-            }<br><br>`
-        )
-        .join("");
-    }
-
-    buscarInput.addEventListener("input", () => {
-      const filtro = buscarInput.value.toLowerCase();
-      const filtradas = palabras.filter((p) =>
-        p.palabra.toLowerCase().includes(filtro)
-      );
-      mostrarDiccionario(filtradas);
-    });
-
-    // Inicialización
     async function iniciar() {
-      palabras = await cargarDatos("data3.json"); // <- Aquí cargas el archivo correcto
+      palabras = await cargarDatos("data3.json");
       if (palabras.length > 0) {
         mostrarPregunta();
-        mostrarDiccionario(palabras);
       }
     }
 
@@ -153,3 +109,4 @@
   </script>
 </body>
 </html>
+
