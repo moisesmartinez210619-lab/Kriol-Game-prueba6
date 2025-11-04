@@ -1,89 +1,89 @@
-let palabras = [];
-let indiceActual = 0;
-
-const preguntaEl = document.getElementById("pregunta");
-const opcionesEl = document.getElementById("opciones");
-const feedbackEl = document.getElementById("feedback");
-const siguienteBtn = document.getElementById("siguiente");
-const volverInicioBtn = document.getElementById("volverInicio");
-
-async function cargarDatos(url) {
-  try {
-    const res = await fetch(url);
-    if (!res.ok) throw new Error("No se pudo cargar el archivo");
-    const data = await res.json();
-    return data;
-  } catch (error) {
-    preguntaEl.textContent = "Error al cargar los datos.";
-    console.error(error);
-    return [];
-  }
+function empezar(archivo) {
+  localStorage.setItem("leccionActual", archivo);
+  window.location.href = "leccion.html";
 }
 
-function mostrarPregunta() {
-  if (indiceActual >= palabras.length) {
-    preguntaEl.textContent = "¡Has terminado la lección!";
-    opcionesEl.innerHTML = "";
+// Si estamos en leccion.html
+if (window.location.pathname.includes("leccion.html")) {
+  let palabras = [];
+  let indice = 0;
+  let puntaje = 0;
+  const leccion = localStorage.getItem("leccionActual") || "data.json";
+
+  fetch(leccion)
+    .then(res => res.json())
+    .then(data => {
+      palabras = data;
+      mostrarPregunta();
+    });
+
+  const preguntaElem = document.getElementById("pregunta");
+  const opcionesElem = document.getElementById("opciones");
+  const feedback = document.getElementById("feedback");
+  const siguienteBtn = document.getElementById("siguiente");
+
+  function mostrarPregunta() {
+    const actual = palabras[indice];
+    preguntaElem.textContent = `¿Qué significa "${actual.palabra}"?`;
+    opcionesElem.innerHTML = "";
+    feedback.textContent = "";
     siguienteBtn.style.display = "none";
-    return;
+
+    const opciones = generarOpciones(actual.significado);
+    opciones.forEach(op => {
+      const btn = document.createElement("button");
+      btn.textContent = op;
+      btn.className = "opcion";
+      btn.onclick = () => verificar(op, actual.significado);
+      opcionesElem.appendChild(btn);
+    });
   }
 
-  const item = palabras[indiceActual];
-  preguntaEl.textContent = `¿Qué significa: "${item.palabra}"?`;
+  function generarOpciones(correcta) {
+    const opciones = [correcta];
+    while (opciones.length < 4) {
+      const rand = palabras[Math.floor(Math.random() * palabras.length)].significado;
+      if (!opciones.includes(rand)) opciones.push(rand);
+    }
+    return opciones.sort(() => Math.random() - 0.5);
+  }
 
-  let opciones = [item.significado];
-  let otros = palabras
-    .filter((_, i) => i !== indiceActual)
-    .sort(() => 0.5 - Math.random())
-    .slice(0, 3)
-    .map((p) => p.significado);
+  function verificar(seleccion, respuesta) {
+    if (seleccion === respuesta) {
+      feedback.textContent = "✅ ¡Correcto!";
+      puntaje++;
+    } else {
+      feedback.textContent = `❌ Incorrecto. Era: ${respuesta}`;
+    }
+    siguienteBtn.style.display = "inline-block";
+    document.querySelectorAll(".opcion").forEach(b => b.disabled = true);
+  }
 
-  opciones = opciones.concat(otros).sort(() => 0.5 - Math.random());
-
-  opcionesEl.innerHTML = "";
-  opciones.forEach((opcion) => {
-    const btn = document.createElement("button");
-    btn.textContent = opcion;
-    btn.className = "opcion";
-    btn.onclick = () => verificarRespuesta(opcion);
-    opcionesEl.appendChild(btn);
+  siguienteBtn.addEventListener("click", () => {
+    indice++;
+    if (indice < palabras.length) {
+      mostrarPregunta();
+    } else {
+      guardarProgreso();
+      preguntaElem.textContent = `Lección completada 🎉 Tu puntaje: ${puntaje}/${palabras.length}`;
+      opcionesElem.innerHTML = "";
+      feedback.textContent = "";
+      siguienteBtn.style.display = "none";
+    }
   });
 
-  feedbackEl.textContent = "";
-  siguienteBtn.style.display = "none";
-}
-
-function verificarRespuesta(respuesta) {
-  const correcto = palabras[indiceActual].significado;
-  if (respuesta === correcto) {
-    feedbackEl.textContent = "✅ Correcto!";
-  } else {
-    feedbackEl.textContent = `❌ Incorrecto. La respuesta correcta es: ${correcto}`;
-  }
-  siguienteBtn.style.display = "inline-block";
-
-  Array.from(opcionesEl.children).forEach((btn) => {
-    btn.disabled = true;
-    if (btn.textContent === correcto) btn.style.backgroundColor = "#00b894";
-    else if (btn.textContent === respuesta) btn.style.backgroundColor = "#d63031";
-  });
-}
-
-siguienteBtn.addEventListener("click", () => {
-  indiceActual++;
-  mostrarPregunta();
-});
-
-volverInicioBtn.addEventListener("click", () => {
-  window.location.href = "index.html";
-});
-
-async function iniciar() {
-  palabras = await cargarDatos("data3.json");
-  if (palabras.length > 0) {
-    mostrarPregunta();
+  function guardarProgreso() {
+    localStorage.setItem(`puntaje_${leccion}`, puntaje);
   }
 }
 
-iniciar();
-
+// Mostrar progreso en index.html
+if (window.location.pathname.includes("index.html") || window.location.pathname === "/") {
+  const progresoElem = document.getElementById("progreso");
+  const l1 = localStorage.getItem("puntaje_data.json");
+  const l2 = localStorage.getItem("puntaje_data2.json");
+  let texto = "";
+  if (l1) texto += `📖 Lección 1: ${l1} puntos<br>`;
+  if (l2) texto += `👋🏾 Lección 2: ${l2} puntos`;
+  progresoElem.innerHTML = texto;
+}
