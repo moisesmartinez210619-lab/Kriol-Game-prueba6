@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Lección Kriol</title>
-  <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Lección Kriol - Saludos y Frases Básicas</title>
+  <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <div class="container">
@@ -12,51 +12,144 @@
     <div id="opciones"></div>
     <p id="feedback"></p>
     <button id="siguiente" style="display:none;">Siguiente</button>
-    <br>
-    
+
+    <br />
     <button id="volverInicio">🏠 Volver al inicio</button>
 
-    <!-- Diccionario -->
-    <div id="diccionarioContainer" style="display:none; margin-top:20px; text-align:left;">
-      <input type="text" id="buscar" placeholder="Buscar palabra..." style="width:100%; padding:8px; margin-bottom:10px; border-radius:5px; border:1px solid #ccc;">
+    <!-- Diccionario siempre visible -->
+    <div id="diccionarioContainer" style="margin-top:20px; text-align:left;">
+      <input
+        type="text"
+        id="buscar"
+        placeholder="Buscar palabra..."
+        style="width: 100%; padding: 8px; margin-bottom: 10px; border-radius: 5px; border: 1px solid #ccc"
+      />
       <div id="diccionarioLista"></div>
     </div>
   </div>
 
-  <script src="script.js"></script>
   <script>
-    // Botón volver al inicio
-    const btnInicio = document.getElementById("volverInicio");
-    btnInicio.addEventListener("click", () => {
-      window.location.href = "index.html";
-    });
+    // Variables globales
+    let palabras = [];
+    let indiceActual = 0;
 
-    // Diccionario
-    const btnDicc = document.getElementById("diccionario");
-    const diccContainer = document.getElementById("diccionarioContainer");
+    // Elementos del DOM
+    const preguntaEl = document.getElementById("pregunta");
+    const opcionesEl = document.getElementById("opciones");
+    const feedbackEl = document.getElementById("feedback");
+    const siguienteBtn = document.getElementById("siguiente");
+    const volverInicioBtn = document.getElementById("volverInicio");
     const diccLista = document.getElementById("diccionarioLista");
     const buscarInput = document.getElementById("buscar");
 
-    btnDicc.addEventListener("click", () => {
-      if (diccContainer.style.display === "none") {
-        diccContainer.style.display = "block";
-        mostrarDiccionario(palabras);
-      } else {
-        diccContainer.style.display = "none";
+    // Función para cargar JSON
+    async function cargarDatos(url) {
+      try {
+        const res = await fetch(url);
+        const data = await res.json();
+        return data;
+      } catch (error) {
+        preguntaEl.textContent = "Error al cargar los datos.";
+        console.error(error);
+        return [];
       }
+    }
+
+    // Mostrar pregunta y opciones
+    function mostrarPregunta() {
+      if (indiceActual >= palabras.length) {
+        preguntaEl.textContent = "¡Has terminado la lección!";
+        opcionesEl.innerHTML = "";
+        siguienteBtn.style.display = "none";
+        return;
+      }
+      const item = palabras[indiceActual];
+      preguntaEl.textContent = `¿Qué significa: "${item.palabra}"?`;
+
+      // Opciones: mezclamos el significado correcto con otros al azar
+      let opciones = [item.significado];
+
+      // Tomar otros significados aleatorios para las opciones (3 más o menos)
+      let otros = palabras
+        .filter((_, i) => i !== indiceActual)
+        .sort(() => 0.5 - Math.random())
+        .slice(0, 3)
+        .map((p) => p.significado);
+
+      opciones = opciones.concat(otros).sort(() => 0.5 - Math.random());
+
+      opcionesEl.innerHTML = "";
+
+      opciones.forEach((opcion) => {
+        const btn = document.createElement("button");
+        btn.textContent = opcion;
+        btn.className = "opcion";
+        btn.onclick = () => verificarRespuesta(opcion);
+        opcionesEl.appendChild(btn);
+      });
+
+      feedbackEl.textContent = "";
+      siguienteBtn.style.display = "none";
+    }
+
+    // Verificar respuesta
+    function verificarRespuesta(respuesta) {
+      const correcto = palabras[indiceActual].significado;
+      if (respuesta === correcto) {
+        feedbackEl.textContent = "✅ Correcto!";
+      } else {
+        feedbackEl.textContent = `❌ Incorrecto. La respuesta correcta es: ${correcto}`;
+      }
+      siguienteBtn.style.display = "inline-block";
+      // Deshabilitar botones
+      Array.from(opcionesEl.children).forEach((btn) => {
+        btn.disabled = true;
+        if (btn.textContent === correcto) btn.style.backgroundColor = "#00b894";
+        else if (btn.textContent === respuesta) btn.style.backgroundColor = "#d63031";
+      });
+    }
+
+    // Ir a siguiente pregunta
+    siguienteBtn.addEventListener("click", () => {
+      indiceActual++;
+      mostrarPregunta();
     });
+
+    // Volver al inicio
+    volverInicioBtn.addEventListener("click", () => {
+      window.location.href = "index.html";
+    });
+
+    // Mostrar diccionario (inicial y filtrado)
+    function mostrarDiccionario(lista) {
+      diccLista.innerHTML = lista
+        .map(
+          (p) =>
+            `<b>${p.palabra}</b>: ${p.significado}<br><i>Ejemplo:</i> ${
+              p.ejemplo || "N/A"
+            }<br><br>`
+        )
+        .join("");
+    }
 
     buscarInput.addEventListener("input", () => {
       const filtro = buscarInput.value.toLowerCase();
-      const filtradas = palabras.filter(p => p.palabra.toLowerCase().includes(filtro));
+      const filtradas = palabras.filter((p) =>
+        p.palabra.toLowerCase().includes(filtro)
+      );
       mostrarDiccionario(filtradas);
     });
 
-    function mostrarDiccionario(lista) {
-      diccLista.innerHTML = lista.map(p => 
-        `<b>${p.palabra}</b>: ${p.significado}<br><i>Ejemplo:</i> ${p.ejemplo || 'N/A'}<br><br>`
-      ).join('');
+    // Inicialización
+    async function iniciar() {
+      palabras = await cargarDatos("data3.json"); // <- Aquí cargas el archivo correcto
+      if (palabras.length > 0) {
+        mostrarPregunta();
+        mostrarDiccionario(palabras);
+      }
     }
+
+    iniciar();
   </script>
 </body>
 </html>
